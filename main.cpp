@@ -1,245 +1,404 @@
-#include <iostream>
-#include <string>
-#include <vector>
 #include <fstream>
-
-#include "frequency.h"
-#include "transposition.h"
-#include "concealment.h"
+#include <iostream>
+#include <iomanip>
+#include "Transposition.h"
+#include "Substitution.h"
+#include "stringmanip.h"
 using namespace std;
 
-#define PROGRAM "crypto"
-#define DEFAULT "english"
+// The analysis module to use based on user input
+enum Module { CONCEALMENT, TRANSPOSITION, SUBSTITUTION };
+
+/* readFile
+ * Input: name of file to open
+ * Output: string containing exact file contents
+ */
+string readFile(string fileName);
 
 /* strip
- * Removes all characters except A-Z and a-z from the ciphertext.
+ * Input: text string to clena up
+ * Output: string with all but A-Za-z removed
  */
-string strip(string ciphertext);
+//string strip(string s);
 
-/* toUpper
- * Converts all characters in ciphertext to uppercase
+/* explode
+ * Input: string, character
+ * Output: vector<string> containing substrings separated by the character
  */
-string toUpper(string ciphertext);
+//vector<string> explode(string s, char c);
 
-/* parseFiles
- * Given a vector of filenames, attempts to open each file.
- * Converts to uppercase, stores each file's contents as a string,
- *  and returns a vector of these strings
+/* writeIn
+ * Input: string, number of columns
+ * Output: vector<string> rows of the grid
  */
-vector<string> parseFiles(vector<string> ciphertextFiles);
+//vector<string> writeIn(string s, int cols, string method);//WriteInMethod method);
 
-/* usage
- * Returns short usage information
+/* space
+ * Input: string
+ * Output: string with spaces between each character
  */
-void usage();
+//string space(string s);
 
-/* help
- * Returns more detailed usage and help information
+/* factor
+ * Input: integer to factor
+ * Output: vector<int> containing all factors, or empty vector if integer is prime
  */
-void help();
+//vector<int> factor(int n);
 
-/* main function
- * Parses the passed-in command line args to determine the type of operation;
- * Calls the necessary support modules depending on flags
+/* reverse
+ * Input: string to reverse
+ * Output: returns the string written backwards
  */
+//string reverse(string s);
+
+/* readOut
+ * Input: grid of ciphertext to be read out in columns
+ * Output: string containing read-out plaintext
+ */
+//string readOut(vector<string> grid);
+
+/* toLower
+ * Input: string
+ * Output: string with uppercase letters change to lowercase, others untouched
+ */
+//string toLower(string s);
+
+/* vowels
+ * Input: grid of letters, rows or columns to calculate
+ * Output: vector<float> containing vowel percentages
+ */
+//vector<float> vowels(vector<string> grid, bool cols);
+
+/* countVowels
+ * Input: string
+ * Output: number of vowels in string
+ */
+//int countVowels(string s);
+
+/* transpose
+ * Input: grid of letters
+ * Output: columns transposed to rows
+ */
+//vector<string> transpose(vector<string> grid);
+
+/* pad
+ * Input: string, desired length
+ * Output: string with spaces added to the end to achieve desired length
+ */
+//string pad(string s, int length);
+
+void drawControlsWin(string controls);
+
 int main(int argc, char * argv[])
 {
-	// Flags for calling program modules
-	bool frequencyAnalysis = false;			// flag frequency analysis module
-	bool concealmentAnalysis = false;		// flag concealment cipher analysis module
-	bool transpositionAnalysis = false;		// flag transposition cipher analysis module
-	bool substitutionAnalysis = false;		// flag substituion cipher analysis module
-	bool allAnalysis = false;				// flag all cipher analysis options
-	bool combinedAnalysis = false;			// flag individual analysis of input files
-	string language = DEFAULT;				// flag language to use for analysis
-	vector<string> ciphertextFiles;			// vector containing the filenames to analyze
-
-
-	// Insufficient arguments passed in; print short usage message
-	if (argc <= 1)
+	// Check for insufficient arguments
+	if (argc != 2)
 	{
-		usage();
+		cout << "Usage: " << argv[0] << " [FILE]" << endl;
 		return 1;
 	}
 
-	// Parse command line args
-	else
+	// Load file
+	const string fileName = string(argv[1]);
+	string cipherfile = readFile(fileName);
+
+	// Check for file too short (empty)
+	if (! cipherfile.length())
 	{
-		for (int i = 1; i < argc; i++)
-		{
-			// Help switch: calls the help display and exits
-			if (
-					string(argv[i]) == "-h"
-					|| string(argv[i]) == "-help"
-					|| string(argv[i]) == "--h"
-					|| string(argv[i]) == "--help"
-					|| string(argv[i]) == "-?"
-					|| string(argv[i]) == "--?"
-			   )
-			{
-				help();
-				return 1;	// if help switch is given, stop parsing arguments
-			}
-
-			// Frequency analysis switch: calls the frequency analysis module
-			else if (
-					string(argv[i]) == "-f"
-					|| string(argv[i]) == "-frequency"
-					|| string(argv[i]) == "-frequencies"
-					|| string(argv[i]) == "--f"
-					|| string(argv[i]) == "--frequency"
-					|| string(argv[i]) == "--frequencies"
-					)
-			{
-				frequencyAnalysis = true;
-			}
-			
-			// Language to use
-			else if (
-					string(argv[i]) == "-l"
-					|| string(argv[i]) == "-language"
-					|| string(argv[i]) == "--l"
-					|| string(argv[i]) == "--language"
-					)
-			{
-				if (i + 1 == argc)	// no given language parameter
-				{
-					usage();
-					return 1;
-				}
-				else
-				{
-					language = argv[i+1];
-					i++;
-				}
-			}
-
-			// Concealment analysis: calls the concealment cipher module
-			else if (
-					string(argv[i]) == "-c"
-					|| string(argv[i]) == "-concealment"
-					|| string(argv[i]) == "--c"
-					|| string(argv[i]) == "--concealment"
-					)
-			{
-				concealmentAnalysis = true;
-			}
-
-			// Transposition analysis: calls the transposition module
-			else if (
-					string(argv[i]) == "-t"
-					|| string(argv[i]) == "-transposition"
-					|| string(argv[i]) == "--t"
-					|| string(argv[i]) == "--transposition"
-					)
-			{
-				transpositionAnalysis = true;
-			}
-
-			// Non-switch arguments assumed to be filenames
-			else
-				ciphertextFiles.push_back(string(argv[i]));
-
-
-/*			// Unrecognized command line option; print usage and exit
-			else
-			{
-				usage();
-				return 1;
-			}
-*/
-		}
+		cout << "File '" << argv[1] << "' appears to be empty." << endl;
+		return 1;
 	}
 
-	// Attempt to open and parse the given ciphertext files
-	vector<string> ciphertexts = parseFiles(ciphertextFiles);
+	// If text is to be stripped of whitespace/non-alphabet characters
+	bool strip_text = false;
+	if (strip_text)
+		cipherfile = strip(cipherfile);
+	
+	// Initialize ncurses
+	initscr();					// start ncurses mode
+	start_color();				// use colors
+	cbreak();					// capture input from user without line breaks
+	keypad(stdscr, TRUE);		// enable F-keys and number pad
+	noecho();					// do not echo user input
+	clear();					// clear the screen before use
 
-	// Parse the flags and call appropriate modules
-	if (combinedAnalysis)
+	// Print filename
+	init_pair(1, COLOR_RED, COLOR_BLACK);
+	attron(A_UNDERLINE | COLOR_PAIR(1));
+	printw(("File: " + fileName).c_str());
+	attroff(A_UNDERLINE | COLOR_PAIR(1));
+	refresh();
+
+	string plaintext = "";
+
+	// TODO: Set up module parsing
+	//Module m = TRANSPOSITION;
+	Module m = SUBSTITUTION;
+
+	switch (m)
 	{
-		// Concatenate files together before analysis
+		case TRANSPOSITION:
+			// Draw controls window
+			drawControlsWin(TRANSPOSITION_CONTROLS);
+			// Run the transposition module
+			plaintext = transposition(cipherfile);
+			break;
+		case SUBSTITUTION:
+			// Draw controls window
+			drawControlsWin(SUBSTITUTION_CONTROLS);
+			// Run the substitution module
+			plaintext = substitution(cipherfile);
+			break;
 	}
-	for (int i = 0; i < ciphertexts.size(); i++)
-	{
-//		if (frequencyAnalysis)
-//			frequency(language);
-		if (concealmentAnalysis)
-			concealment(ciphertexts[i]);
-		if (transpositionAnalysis)
-			transposition(strip(ciphertexts[i]));
-		if (substitutionAnalysis)
-			cout << "Substitution" << endl;
-	}
+
+	endwin();					// end curses mode
+
+
+	cout << fileName << ":" << endl << plaintext << endl;
 
 	return 0;
 }
 
-string strip(string ciphertext)
+string readFile(string fileName)
 {
-	string strippedCiphertext = "";
-	for (int i = 0; i < ciphertext.length(); i++)
-	{
-		if ((int(ciphertext[i]) >= 65 && int(ciphertext[i]) <= 90)
-				|| (int(ciphertext[i]) >= 97 && int(ciphertext[i]) <= 122))
-			strippedCiphertext += ciphertext[i];
-	}
-
-	return strippedCiphertext;
-}
-
-string toUpper(string ciphertext)
-{
-	string capitalizedCiphertext = "";
-	for (int i = 0; i < ciphertext.length(); i++)
-	{
-		if (int(ciphertext[i]) >= 97)
-			capitalizedCiphertext += char(int(ciphertext[i]) - 32);
-		else
-			capitalizedCiphertext += ciphertext[i];
-	}
-
-	return capitalizedCiphertext;
-}
-
-vector<string> parseFiles(vector<string> ciphertextFiles)
-{
-	string ciphertext = "";
-	string line;
-	vector<string> ciphertexts;
+    string ciphertext = "", line;
 	ifstream file;
 
-	for (int i = 0; i < ciphertextFiles.size(); i++)
+	file.open(fileName.c_str());
+	if (file.is_open())
 	{
-		file.open(ciphertextFiles[i].c_str());
-		if (file.is_open())
+		while (file.good())
 		{
-			while (file.good())
-			{
-				getline(file, line);
-				ciphertext += line;
-			}
-			ciphertexts.push_back(ciphertext);
-			file.close();
-			ciphertext = "";
+			getline(file, line);
+			ciphertext += line + " ";
 		}
-		else
+		file.close();
+	}
+	else
+		cout << "Cannot open file '" << fileName << "'." << endl;
+
+	return ciphertext;
+}
+
+void drawControlsWin(string controls)
+{
+	init_pair(1, COLOR_RED, COLOR_BLACK);
+	WINDOW * fcontrolswin = newwin(2, COLS, LINES - 2, 0);
+	string border = "";
+	for (int i = 0; i < controls.length(); i++)
+		border += '_';
+	mvwprintw(fcontrolswin, 0, 0, border.c_str());
+	wattron(fcontrolswin, COLOR_PAIR(1));
+	mvwprintw(fcontrolswin, 1, 0, controls.c_str());
+	wrefresh(fcontrolswin);
+	wattroff(fcontrolswin, COLOR_PAIR(1));
+}
+
+/*
+vector<string> writeIn(string s, int cols, string method)//WriteInMethod method)
+{
+	vector<string> grid;
+	if (method == "diagonals")
+	{
+		int pos = 0;
+		// First set of characters to the main diagonal
+		for (int i = 0; i < cols; i++)
 		{
-			cout << "Unable to open file '" << ciphertextFiles[i] << "'." << endl;
-			usage();
+			for (int j = 0; j <= i; j++)
+			{
+				if (grid.size() < j + 1)
+					grid.push_back("");
+				grid[j] += s[pos++];
+			}
+		}
+		// Second set of characters after main diagonal
+		for (int i = 1; i < grid.size(); i++)
+		{
+			for (int j = i; j < grid.size(); j++)
+				grid[j] += s[pos++];
+		}
+	}
+	else if (method == "spirals")
+	{
+		for (int i = 0; i < cols; i++)
+		{
+			string row = "";
+			for (int j = 0; j < cols; j++)
+				row += "#";
+			grid.push_back(row);
+		}
+		
+		int x = cols / 2, y = cols / 2;
+		int inc;
+		int pos = 0;
+		grid[x][y] = s[pos++];
+		for (int i = 0; i < cols - 1; i++)
+		{
+			inc = -1;
+			for (int k = 0; k < i; k++)
+				inc *= -1;
+
+			for (int j = 0; j <= i; j++)
+			{
+				y += inc;
+				grid[x][y] = s[pos++];
+			}
+			for (int j = 0; j <= i; j++)
+			{
+				x += inc;
+				grid[x][y] = s[pos++];
+			}
+		}
+		inc = -1;
+		for (int j = 0; j < cols -1; j++)
+		{
+			y += inc;
+			grid[x][y] = s[pos++];
+		}
+	}
+	else if (method == "transposed rows")
+	{
+		for (int i = 0; i < s.length(); i+=cols)
+			grid.push_back(s.substr(i, cols));
+		// Transpose every other (odd) row
+		for (int i = 1; i < grid.size(); i+=2)
+			grid[i] = reverse(grid[i]);
+	}
+	else if (method == "magic square")
+	{
+		for (int i = 1; i <= cols; i++)
+		{
+			grid.push_back("");
+			for (int j = 1; j <= cols; j++)
+				grid[i-1] += s[cols*((i+j-1+cols/2)%cols)+((i+2*j-2)%cols)];
+		}
+		// Rotate the magic square
+
+	}
+	else	// rows is the default method
+	{
+		for (int i = 0; i < s.length(); i+=cols)
+		    grid.push_back(s.substr(i, cols));
+	}
+
+    return grid;
+}
+*/
+/*
+string space(string s)
+{
+	string spaced = "";
+	for (int i = 0; i < s.length(); i++)
+	{
+		spaced += s[i];
+		spaced += ' ';
+	}
+	return spaced;
+}
+*/
+/*
+vector<int> factor(int n)
+{
+    vector<int> factors;
+    // We are only interested in factors > 1
+	for (int i = 2; i <= n / 2; i++)
+    {
+        if (n % i == 0)
+            factors.push_back(i);
+    }
+
+	// factors is empty if n is prime
+	return factors;
+}
+
+string reverse(string s)
+{
+	string reversed = "";
+	for (int i = s.length() - 1; i >=0; i--)
+		reversed += s[i];
+
+	return reversed;
+}
+
+string readOut(vector<string> grid)
+{
+	string plaintext = "";
+	// Read text out of grid by columns
+	for (int col = 0; col < grid[0].length(); col++)
+	{
+		for (int row = 0; row < grid.size(); row++)
+		{
+			if (col < grid[row].length())	// some columns will have more letters than others
+				plaintext += grid[row][col];
 		}
 	}
 
-	return ciphertexts;
+	return plaintext;
+}
+*/
+/*
+string toLower(string s)
+{
+	string lower = "";
+	for (int i = 0; i < s.length(); i++)
+	{
+		if (int(s[i]) >= 65 && int(s[i]) <= 90)
+			lower += char(int(s[i]) + 32);
+		else
+			lower += s[i];
+	}
+
+	return lower;
+}
+*/
+/*
+vector<float> vowels(vector<string> grid, bool cols)
+{
+	vector<float> gridVowels;
+	// Calculate column vowels
+	if (cols)
+		grid = transpose(grid);
+	// Else row vowels will be calculated
+	for (int i = 0; i < grid.size(); i++)
+		gridVowels.push_back(float(countVowels(grid[i])) / float(grid[i].length()));
+
+	return gridVowels;
 }
 
-void usage()
+int countVowels(string s)
 {
-	cout << "Incorrect arguments." << endl;
-	cout << "Usage: " << PROGRAM << " [arguments]" << endl;
-	cout << "For help use '--help'" << endl;
+	int vowels = 0;
+	for (int i = 0; i < s.length(); i++)
+	{
+		if (s[i] == 'A' || s[i] == 'E' || s[i] == 'I' || s[i] == 'O' || s[i] == 'U')
+			vowels++;
+	}
+
+	return vowels;
+}
+*/
+/*
+vector<string> transpose(vector<string> grid)
+{
+	vector<string> gridT;
+	for (int i = 0; i < grid[0].length(); i++)
+	{
+		gridT.push_back("");
+		for (int j = 0; j < grid.size(); j++)
+		{
+			if (grid[j].length() > i)
+				gridT[i] += grid[j][i];
+		}
+	}
+
+	return gridT;
 }
 
-void help()
+string pad(string s, int length)
 {
-	cout << "HELP" << endl;
+	string padded = s;
+	for (int i = 0; i < length - s.length(); i++)
+		padded += ' ';
+	return padded;
 }
+*/
