@@ -1,0 +1,10 @@
+# Ignore all files to catch all compiled binaries
+*
+# Do not ignore source code
+!*.h
+!*.cpp
+
+# Do not ignore README, LICENSE, .gitignore
+!README*
+!LICENSE*
+!.gitignore
